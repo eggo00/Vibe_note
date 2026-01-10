@@ -14,6 +14,7 @@ from ..utils.db import get_db
 from ..models.data_source import DataSource, Block
 from ..models.document import Document, Version
 from ..services.generator.note_generator import NoteGenerator
+from ..services.generator.mock_note_generator import MockNoteGenerator
 from ..schemas.common import SuccessResponse, ErrorCode, create_error_response, create_success_response
 from ..config import settings
 
@@ -120,7 +121,11 @@ async def generate_note(
 
         # 若無自訂風格，使用預設模板（這裡先建立 generator 取得預設值）
         try:
-            generator = NoteGenerator()
+            # 根據設定選擇使用真實 AI 或 Mock
+            if settings.USE_MOCK_AI:
+                generator = MockNoteGenerator()
+            else:
+                generator = NoteGenerator()
         except ValueError as e:
             raise HTTPException(
                 status_code=500,
@@ -272,7 +277,11 @@ async def regenerate_note(
 
     # 4. 重新生成
     try:
-        generator = NoteGenerator()
+        # 根據設定選擇使用真實 AI 或 Mock
+        if settings.USE_MOCK_AI:
+            generator = MockNoteGenerator()
+        else:
+            generator = NoteGenerator()
         style_template = generator.get_default_style_template()
 
         markdown_content = await generator.generate_note(

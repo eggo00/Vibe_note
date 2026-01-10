@@ -12,6 +12,7 @@ from datetime import datetime
 from ..utils.db import get_db
 from ..models.data_source import DataSource, Block
 from ..services.analyzer.quality_scorer import QualityScorer
+from ..services.analyzer.mock_quality_scorer import MockQualityScorer
 from ..schemas.common import SuccessResponse, ErrorCode, create_error_response, create_success_response
 from ..config import settings
 
@@ -82,7 +83,11 @@ async def analyze_content(
 
         # 3. 呼叫 QualityScorer 評分
         try:
-            scorer = QualityScorer()
+            # 根據設定選擇使用真實 AI 或 Mock
+            if settings.USE_MOCK_AI:
+                scorer = MockQualityScorer(threshold=settings.QUALITY_SCORE_THRESHOLD)
+            else:
+                scorer = QualityScorer()
             scoring_results = await scorer.score_blocks_batch(blocks)
         except ValueError as e:
             # OpenAI API key 未設定

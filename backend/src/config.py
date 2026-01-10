@@ -44,6 +44,10 @@ class Settings(BaseSettings):
         default="gpt-3.5-turbo",
         description="使用的 OpenAI 模型"
     )
+    USE_MOCK_AI: bool = Field(
+        default=False,
+        description="使用 Mock AI（開發測試用，不需要 OpenAI API Key）"
+    )
 
     # 爬蟲設定
     RATE_LIMIT_PER_SECOND: float = Field(
