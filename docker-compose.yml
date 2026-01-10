@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vibe-note-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/__pycache__
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - ./backend/.env
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    depends_on:
+      - db
+    networks:
+      - vibe-note-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vibe-note-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    env_file:
+      - ./frontend/.env
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - vibe-note-network
+
+  db:
+    image: alpine:latest
+    container_name: vibe-note-db
+    volumes:
+      - ./vibe_note.db:/data/vibe_note.db
+    command: /bin/sh -c "while true; do sleep 3600; done"
+    networks:
+      - vibe-note-network
+
+networks:
+  vibe-note-network:
+    driver: bridge
+
+volumes:
+  db_data:

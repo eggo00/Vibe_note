@@ -1,0 +1,454 @@
+openapi: 3.0.3
+info:
+  title: Vibe Note API
+  description: AI 驅動的學習筆記自動生成系統 API
+  version: 1.0.0
+  contact:
+    name: Vibe Coding Team
+
+servers:
+  - url: http://localhost:8000
+    description: 本地開發環境
+  - url: https://api.vibenote.com
+    description: 生產環境
+
+tags:
+  - name: scraper
+    description: 爬蟲相關 API
+  - name: analyze
+    description: 內容分析 API
+  - name: style
+    description: 風格學習 API
+  - name: generate
+    description: 筆記生成 API
+  - name: documents
+    description: 文件管理 API
+  - name: export
+    description: 匯出相關 API
+
+paths:
+  /api/notion/import:
+    post:
+      tags: [scraper]
+      summary: 匯入 Notion 公開頁面
+      description: 爬取 Notion 公開頁面並進行 block-level 解析
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://www.notion.so/My-Project-abc123"
+                document_id:
+                  type: string
+                  description: 所屬文件 ID（可選，若未提供則建立新文件）
+                  example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 成功爬取
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  source_id: "src-456def"
+                  page_id: "abc123"
+                  title: "React Hooks 實作"
+                  total_blocks: 45
+                  learnable_blocks: 12
+                  blocks:
+                    - block_id: "blk-001"
+                      block_type: "heading"
+                      text_content: "專案摘要"
+                      hierarchy_level: 1
+                      quality_score: 85.3
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/blog/import:
+    post:
+      tags: [scraper]
+      summary: 匯入 Blog/Substack 文章
+      description: 爬取 Blog 或 Substack 公開文章
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  example: "https://blog.example.com/react-hooks-guide"
+      responses:
+        '200':
+          description: 成功爬取
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/analyze:
+    post:
+      tags: [analyze]
+      summary: 分析內容品質並評分
+      description: 對已爬取的 Notion 內容進行 block-level 品質評分
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [source_id]
+              properties:
+                source_id:
+                  type: string
+                  example: "src-456def"
+      responses:
+        '200':
+          description: 分析完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  source_id: "src-456def"
+                  total_blocks: 45
+                  learnable_blocks: 12
+                  avg_quality_score: 72.5
+                  high_quality_blocks: ["blk-001", "blk-003", "blk-007"]
+
+  /api/style/build:
+    post:
+      tags: [style]
+      summary: 建立寫作風格模型
+      description: 分析老師文章並產生 StyleProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [blog_urls]
+              properties:
+                blog_urls:
+                  type: array
+                  items:
+                    type: string
+                    format: uri
+                  example:
+                    - "https://blog.teacher.com/post1"
+                    - "https://blog.teacher.com/post2"
+                profile_name:
+                  type: string
+                  example: "老師 Blog 風格"
+      responses:
+        '200':
+          description: 風格模型建立完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  profile_id: "style-001"
+                  name: "老師 Blog 風格"
+                  common_heading_patterns:
+                    - "## 專案摘要"
+                    - "## 核心概念"
+                  paragraph_order: ["intro", "concept", "code_example"]
+
+  /api/generate:
+    post:
+      tags: [generate]
+      summary: 生成筆記草稿
+      description: 基於所有輸入資料生成 Markdown 筆記
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [conversation_md, data_source_ids]
+              properties:
+                conversation_md:
+                  type: string
+                  description: 對話紀錄 Markdown 內容
+                  example: "# 對話紀錄\n\n**User**: 我想做一個 React 專案..."
+                data_source_ids:
+                  type: array
+                  items:
+                    type: string
+                  example: ["src-456def", "src-789ghi"]
+                style_profile_id:
+                  type: string
+                  example: "style-001"
+                github_repo_url:
+                  type: string
+                  format: uri
+                  example: "https://github.com/user/repo"
+      responses:
+        '200':
+          description: 筆記生成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  document_id: "550e8400-e29b-41d4-a716-446655440000"
+                  title: "React Hooks 實作筆記"
+                  content: "# 專案摘要\n\n本專案實作了..."
+                  version_id: "v-123abc"
+
+  /api/doc/{id}:
+    get:
+      tags: [documents]
+      summary: 取得筆記內容
+      description: 取得指定文件的當前版本內容
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        '200':
+          description: 成功取得
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  document_id: "550e8400"
+                  title: "React Hooks 實作筆記"
+                  content: "# 專案摘要\n\n..."
+                  current_version_id: "v-123abc"
+                  updated_at: "2026-01-07T15:45:00Z"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [documents]
+      summary: 更新筆記內容
+      description: 更新文件內容並自動建立新版本
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  description: 新的 Markdown 內容
+                  example: "# 專案摘要\n\n（已修改）..."
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  document_id: "550e8400"
+                  new_version_id: "v-124def"
+                  updated_at: "2026-01-07T16:00:00Z"
+
+  /api/doc/{id}/versions:
+    get:
+      tags: [documents]
+      summary: 取得版本歷史
+      description: 取得文件的所有版本列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功取得
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  document_id: "550e8400"
+                  versions:
+                    - version_id: "v-124def"
+                      created_at: "2026-01-07T16:00:00Z"
+                      is_current: true
+                      preview: "# 專案摘要\n\n（已修改）本專案..."
+                    - version_id: "v-123abc"
+                      created_at: "2026-01-07T15:45:00Z"
+                      is_current: false
+                      preview: "# 專案摘要\n\n本專案實作了..."
+
+  /api/doc/{id}/restore:
+    post:
+      tags: [documents]
+      summary: 還原到指定版本
+      description: 將文件還原到舊版本（建立新版本）
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version_id]
+              properties:
+                version_id:
+                  type: string
+                  example: "v-123abc"
+      responses:
+        '200':
+          description: 還原成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  document_id: "550e8400"
+                  restored_from: "v-123abc"
+                  new_version_id: "v-125ghi"
+
+  /api/doc/{id}/export:
+    post:
+      tags: [export]
+      summary: 匯出文件
+      description: 將文件匯出為指定格式
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [format]
+              properties:
+                format:
+                  type: string
+                  enum: [markdown, html, pdf]
+                  example: "pdf"
+      responses:
+        '200':
+          description: 匯出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  job_id: "job-abc123"
+                  format: "pdf"
+                  status: "completed"
+                  file_path: "/tmp/exports/550e8400.pdf"
+                  download_url: "http://localhost:8000/downloads/550e8400.pdf"
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: 回應資料（視端點而定）
+
+    ErrorResponse:
+      type: object
+      required: [error, code]
+      properties:
+        error:
+          type: string
+          description: 錯誤描述
+          example: "Invalid URL format"
+        code:
+          type: string
+          description: 錯誤代碼
+          example: "INVALID_URL"
+        details:
+          type: object
+          description: 額外錯誤資訊
+
+  responses:
+    BadRequest:
+      description: 請求參數錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Missing required field: url"
+            code: "MISSING_FIELD"
+
+    NotFound:
+      description: 資源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Document not found"
+            code: "NOT_FOUND"
+
+    InternalError:
+      description: 伺服器內部錯誤
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "Failed to scrape Notion page"
+            code: "SCRAPER_ERROR"
+            details:
+              reason: "Connection timeout after 30s"
