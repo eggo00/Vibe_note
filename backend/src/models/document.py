@@ -3,7 +3,7 @@ Document 與 Version Models
 對應 data-model.md §1, §2
 """
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, String, Text, DateTime, Boolean, Float, Integer, ForeignKey
 from sqlalchemy.orm import relationship
 from ..utils.db import Base
 
@@ -14,7 +14,7 @@ class Document(Base):
 
     document_id = Column(String, primary_key=True)  # UUID v4
     title = Column(String, nullable=False)
-    content = Column(Text, nullable=False)  # 當前版本的 Markdown 內容
+    aggregate_score = Column(Float, nullable=True)  # 整體品質評分（來源的平均分）
     current_version_id = Column(String, ForeignKey("versions.version_id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -35,13 +35,13 @@ class Version(Base):
 
     version_id = Column(String, primary_key=True)  # UUID v4
     document_id = Column(String, ForeignKey("documents.document_id", ondelete="CASCADE"), nullable=False)
+    version_number = Column(Integer, nullable=False)  # 版本號（1, 2, 3...）
     content = Column(Text, nullable=False)  # 完整 Markdown 內容快照
     created_at = Column(DateTime, default=datetime.utcnow)
-    is_current = Column(Boolean, default=False)
-    preview = Column(Text, nullable=True)  # 前 50 字預覽
+    change_summary = Column(Text, nullable=True)  # 變更摘要
 
     # Relationships
     document = relationship("Document", back_populates="versions", foreign_keys=[document_id])
 
     def __repr__(self) -> str:
-        return f"<Version(id={self.version_id}, document_id={self.document_id}, current={self.is_current})>"
+        return f"<Version(id={self.version_id}, document_id={self.document_id}, v{self.version_number})>"

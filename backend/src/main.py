@@ -9,6 +9,8 @@ from .config import settings
 from .api import health
 from .api import notion
 from .api import analyze
+from .api import generate
+from .api import documents
 
 
 @asynccontextmanager
@@ -52,6 +54,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(notion.router)
 app.include_router(analyze.router)
+app.include_router(generate.router)
+app.include_router(documents.router)
 
 
 # 根路徑重定向到 API 文件
