@@ -23,6 +23,15 @@ async def lifespan(app: FastAPI):
     print(f"🌐 CORS 允許來源: {', '.join(settings.cors_origins_list)}")
     print(f"🔧 環境: {'Production' if settings.is_production else 'Development'}")
     print(f"📖 API 文件: http://{settings.HOST}:{settings.PORT}/docs")
+
+    # 初始化資料庫（自動建立資料表）
+    try:
+        from .utils.db import init_db
+        init_db()
+        print("✅ 資料庫初始化完成")
+    except Exception as e:
+        print(f"⚠️ 資料庫初始化失敗: {e}")
+
     print("=" * 50)
 
     yield
