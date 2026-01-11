@@ -20,10 +20,10 @@ const DataSourceInput: React.FC<DataSourceInputProps> = ({ onSubmit, loading = f
       return false;
     }
 
-    // 驗證 Notion URL 格式
-    const notionUrlPattern = /^https?:\/\/(www\.)?notion\.(so|site)\/.+/i;
+    // 驗證 Notion URL 格式（支援自訂子網域）
+    const notionUrlPattern = /^https?:\/\/([a-zA-Z0-9-]+\.)?notion\.(so|site)\/.+/i;
     if (!notionUrlPattern.test(url)) {
-      setError('請輸入有效的 Notion 公開頁面 URL（如：https://notion.so/...）');
+      setError('請輸入有效的 Notion 公開頁面 URL（如：https://notion.so/... 或 https://yourname.notion.site/...）');
       return false;
     }
 
